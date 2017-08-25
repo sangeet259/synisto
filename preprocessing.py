@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-df=pd.read_csv("../ratings.dat",sep="::",header=None,engine="python")
+df=pd.read_csv("ratings.dat",sep="::",header=None,engine="python")
 df.drop(df.columns[[3]], axis=1,inplace=True)
 df.columns=['user_id','movies_id','rating']
 

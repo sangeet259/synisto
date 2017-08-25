@@ -4,49 +4,20 @@ import scipy
 import scipy.optimize  # for fmin_cg to optimize the cost function
 import pickle
 
-with open("data_y","rb") as f:
-    Y = pickle.load(f)
-
-with open("data_R","rb") as f:
-    R = pickle.load(f)
 
 
-backup_Y = Y
-backup_R = R
-
-nm, nu = Y.shape
-nf = 10
-
-# Y is no_moviesxno_users containing ratings (1-5) of no_movies movies on no_users users
-# a rating of 0 means the movie wasn't rated
-# R is no_moviesxno_users containing R(i,j) = 1 if user j gave a rating to movie i
-
-# The i-th row of X corresponds to the feature vector x(i) for the i-th movie, 
-# and the j-th row of Theta corresponds to one parameter vector θ(j), for the j-th user. 
-# Both x(i) and θ(j) are n-dimensional vectors. For the purposes of this exercise, 
-# you will use n = 100, and therefore, x(i) ∈ R100 and θ(j) ∈ R100. Correspondingly, 
-# X is a nm × 100 matrix and Theta is a nu × 100 matrix.
-
-X = np.random.rand(nm,nf)
-Theta = np.random.rand(nu,nf)
-
-# For now, reduce the data set size so that this runs faster
-# nu = 4; nm = 5; nf = 3
-# X = X[:nm,:nf]
-# Theta = Theta[:nu,:nf]
-# Y = Y[:nm,:nu]
-# R = R[:nm,:nu]
-
-# The "parameters" we are minimizing are both the elements of the
-# X matrix (nm*nf) and of the Theta matrix (nu*nf)
 # To use off-the-shelf minimizers we need to flatten these matrices
-# into one long array
+# into one long vector
+
 def flattenParams(myX, myTheta):
     """
     Hand this function an X matrix and a Theta matrix and it will flatten
     it into into one long (nm*nf + nu*nf,1) shaped numpy array
     """
     return np.concatenate((myX.flatten(),myTheta.flatten()))
+
+
+
 
 # A utility function to re-shape the X and Theta will probably come in handy
 def reshapeParams(flattened_XandTheta, mynm, mynu, mynf):
@@ -56,6 +27,9 @@ def reshapeParams(flattened_XandTheta, mynm, mynu, mynf):
     reTheta = flattened_XandTheta[int(mynm*mynf):].reshape((mynu,mynf))
     
     return reX, reTheta
+
+
+
 
 def cofiCostFunc(myparams, myY, myR, mynu, mynm, mynf, mylambda = 0.):
     
@@ -88,11 +62,6 @@ def cofiCostFunc(myparams, myY, myR, mynu, mynm, mynf, mylambda = 0.):
     return cost
 
 
-# "...run your cost function. You should expect to see an output of 22.22."
-# print('Cost with nu = 4, nm = 5, nf = 3 is %0.2f.' %     cofiCostFunc(flattenParams(X,Theta),Y,R,nu,nm,nf))
-    
-# "...with lambda = 1.5 you should expect to see an output of 31.34."
-# print ('Cost with nu = 4, nm = 5, nf = 3 (and lambda = 1.5) is %0.2f.' %     cofiCostFunc(flattenParams(X,Theta),Y,R,nu,nm,nf,mylambda=1.5))
 
 # Remember: use the exact same input arguments for gradient function
 # as for the cost function (the off-the-shelf minimizer requires this)
@@ -122,67 +91,12 @@ def cofiGrad(myparams, myY, myR, mynu, mynm, mynf, mylambda = 0.):
     
     return flattenParams(Xgrad, Thetagrad)
 
-def checkGradient(myparams, myY, myR, mynu, mynm, mynf, mylambda = 0.):
-    
-    print ('Numerical Gradient \t cofiGrad \t\t Difference')
-    
-    # Compute a numerical gradient with an epsilon perturbation vector
-    myeps = 0.0001
-    nparams = len(myparams)
-    epsvec = np.zeros(nparams)
-    # These are my implemented gradient solutions
-    mygrads = cofiGrad(myparams,myY,myR,mynu,mynm,mynf,mylambda)
 
-    # Choose 10 random elements of my combined (X, Theta) param vector
-    # and compute the numerical gradient for each... print to screen
-    # the numerical gradient next to the my cofiGradient to inspect
-    
-    for i in range(10):
-        idx = np.random.randint(0,nparams)
-        epsvec[idx] = myeps
-        loss1 = cofiCostFunc(myparams-epsvec,myY,myR,mynu,mynm,mynf,mylambda)
-        loss2 = cofiCostFunc(myparams+epsvec,myY,myR,mynu,mynm,mynf,mylambda)
-        mygrad = (loss2 - loss1) / (2*myeps)
-        epsvec[idx] = 0
-        print ('%0.15f \t %0.15f \t %0.15f' %         (mygrad, mygrads[idx],mygrad - mygrads[idx]))
-
-
-print ("Checking gradient with lambda = 0...")
-checkGradient(flattenParams(X,Theta),Y,R,nu,nm,nf)
-print ("\nChecking gradient with lambda = 1.5...")
-checkGradient(flattenParams(X,Theta),Y,R,nu,nm,nf,mylambda = 1.5)
-
-
-movies = []
-# ------------------------- take dynamic input
-nm, nu = backup_Y.shape
-my_ratings = np.zeros((nm,1))
-my_ratings[0]   = 4
-my_ratings[97]  = 2
-my_ratings[6]   = 3
-my_ratings[11]  = 5
-my_ratings[53]  = 4
-my_ratings[63]  = 5
-my_ratings[65]  = 3
-my_ratings[68]  = 5
-my_ratings[182] = 4
-my_ratings[225] = 5
-my_ratings[354] = 5
-
-
-Y = backup_Y
-R = backup_R 
-
-
-# Add my ratings to the Y matrix, and the relevant row to the R matrix
-myR_row = my_ratings > 0
-Y = np.hstack((Y,my_ratings))
-R = np.hstack((R,myR_row))
-nm, nu = Y.shape
 
 
 
 def normalizeRatings(myY, myR):
+
     """
     Preprocess data by subtracting mean rating for every movie (every row)
     This is important because without this, a user who hasn't rated any movies
@@ -194,54 +108,134 @@ def normalizeRatings(myY, myR):
     sumY = np.sum(myY,axis=1)
     sumR = np.sum(myR,axis=1)
     # tempY = 
-    Ymean = np.sum(myY,axis=1)/np.sum(myR,axis=1)
+    
+    Ymean = sumY/sumR
     Ymean = Ymean.reshape((Ymean.shape[0],1))
     
     return myY-Ymean, Ymean    
 
-Ynorm, Ymean = normalizeRatings(Y,R)
-
-# Generate random initial parameters, Theta and X
-X = np.random.rand(nm,nf)
-Theta = np.random.rand(nu,nf)
-myflat = flattenParams(X, Theta)
-
-# Regularization parameter of 10 is used (as used in the homework assignment)
-mylambda = 10.
-
-# Training the actual model with fmin_cg
-result = scipy.optimize.fmin_cg(cofiCostFunc, x0=myflat, fprime=cofiGrad,args=(Y,R,nu,nm,nf,mylambda),maxiter=50,disp=True,full_output=True)
-
-with open("trained","wb") as f:
-    pickle.dump(result,f)
-
-# Reshape the trained output into sensible "X" and "Theta" matrices
-resX, resTheta = reshapeParams(result[0], nm, nu, nf)
-
-# After training the model, now make recommendations by computing
-# the predictions matrix
-prediction_matrix = resX.dot(resTheta.T)
 
 
-# Grab the last user's predictions (since I put my predictions at the
-# end of the Y matrix, not the front)
-# Add back in the mean movie ratings
-my_predictions = prediction_matrix[:,-1] + Ymean.flatten()
 
-for i in range(len(my_predictions)):
-    if math.isnan(my_predictions[i]):
-        my_predictions[i] = 0 
 
-# Sort my predictions from highest to lowest
-pred_idxs_sorted = np.argsort(my_predictions)
-pred_idxs_sorted[:] = pred_idxs_sorted[::-1]
 
-print ("Top recommendations for you:")
-for i in range(10):
-    print ('Predicting rating %0.1f for movie id %d .' % (my_predictions[pred_idxs_sorted[i]],pred_idxs_sorted[i]))
+# All the tesing will be done here
+# Problems:
+#   1. The NAN problem
+#   2. Ratings outside 5 problem , the root cause is Y mean which is being addes.
+#       Do we really need it,
+#       Because we are not having any new user who hasn't watched a single movie
+#   3. Tweak Lambda
+#   4. Tweak the number of mathematical genres , ie nf
+#   5. Check for bias , variance (plot cost vs number of features graph)
+#   6. What's the bias Jeremy Howard was talking about in Lecture 4
+#   7. MaxIter
+#  
+# Best will be to use pandas dataframe to gain some insights into it
+# 
+
+
+#   Convert this numpy array into a Pandas Dataframe
+#   
+
+
+
+
+
+
+
+
+
+
+def main():
+
+    with open("data_y","rb") as f:
+    Y = pickle.load(f)
+
+    with open("data_R","rb") as f:
+    R = pickle.load(f)
+    nm, nu = Y.shape
+    nf = 10
+
+    # Y is no_moviesxno_users containing ratings (1-5) of no_movies movies on no_users users
+    # a rating of 0 means the movie wasn't rated
+    # R is no_moviesxno_users containing R(i,j) = 1 if user j gave a rating to movie i
+
+    # The i-th row of X corresponds to the feature vector x(i) for the i-th movie, 
+    # and the j-th row of Theta corresponds to one parameter vector θ(j), for the j-th user. 
+    # Both x(i) and θ(j) are n-dimensional vectors. For the purposes of this exercise, 
+    # you will use n = 100, and therefore, x(i) ∈ R100 and θ(j) ∈ R100. Correspondingly, 
+    # X is a nm × 100 matrix and Theta is a nu × 100 matrix.
+
+
+
+    # Let's Randomly Initialise X and Theta
+
+
+    X = np.random.rand(nm,nf)
+    Theta = np.random.rand(nu,nf)
+
+
+    # The "parameters" we are minimizing are both the elements of the
+    # X matrix (nm*nf) and of the Theta matrix (nu*nf)
+    # Ynorm, Ymean = normalizeRatings(Y,R)
+
+
+    myflat = flattenParams(X, Theta)
+
+    # Choose your own regulaisation parameter
+    mylambda = 10.
+
+    # Training the actual model with fmin_cg
+    result = scipy.optimize.fmin_cg(cofiCostFunc, x0=myflat, fprime=cofiGrad,args=(Y,R,nu,nm,nf,mylambda),maxiter=50,disp=True,full_output=True)
+
+
+    # Save the trained model for future use
+    with open("trained","wb") as f:
+        pickle.dump(result,f)
+
+
+
+    # Reshape the trained output into sensible "X" and "Theta" matrices
+    resX, resTheta = reshapeParams(result[0], nm, nu, nf)
+
+
+
+    # After training the model, now make recommendations by computing
+    # the predictions matrix
+    prediction_matrix = resX.dot(resTheta.T)
+
+main()
+
+
+
+
+
+
+
+
+
+# # ************************************************************************************************************
+
+# # Grab the last user's predictions (since I put my predictions at the
+# # end of the Y matrix, not the front)
+# # Add back in the mean movie ratings
+# my_predictions = prediction_matrix[:,-1] + Ymean.flatten()
+
+# for i in range(len(my_predictions)):
+#     if math.isnan(my_predictions[i]):
+#         my_predictions[i] = 0 
+
+# # Sort my predictions from highest to lowest
+# pred_idxs_sorted = np.argsort(my_predictions)
+# pred_idxs_sorted[:] = pred_idxs_sorted[::-1]
+
+# print ("Top recommendations for you:")
+# for i in range(10):
+#     print ('Predicting rating %0.1f for movie id %d .' % (my_predictions[pred_idxs_sorted[i]],pred_idxs_sorted[i]))
     
 
-# print ("\nOriginal ratings provided:")
-# for i in range(len(my_ratings)):
-#     if my_ratings[i] > 0:
-#         print ('Rated %d for movie %s.' % (my_ratings[i],movies[i]))
+# # print ("\nOriginal ratings provided:")
+# # for i in range(len(my_ratings)):
+# #     if my_ratings[i] > 0:
+# #         print ('Rated %d for movie %s.' % (my_ratings[i],movies[i]))
