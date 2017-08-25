@@ -129,7 +129,8 @@ def normalizeRatings(myY, myR):
 #   4. Tweak the number of mathematical genres , ie nf
 #   5. Check for bias , variance (plot cost vs number of features graph)
 #   6. What's the bias Jeremy Howard was talking about in Lecture 4
-#   7. MaxIter
+#   7. MaxIter :: Use Callback in fmin_cg
+#	8. TensorFlow for better results (gardient Descent insated of fmin_cg)
 #  
 # Best will be to use pandas dataframe to gain some insights into it
 # 
